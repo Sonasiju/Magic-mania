@@ -25,7 +25,10 @@ export class GameScene extends Phaser.Scene {
   private levelId: number = 1;
   private runDistance: number = 0;
   private targetDistance: number = 1000; // Finish line distance
-  private runSpeed: number = 280;
+  private runSpeed: number = 220;
+  // Global speed scale (multiply runSpeed by this to slow/speed the game).
+  // Lower values make incoming objects move slower and distance progress slower.
+  private speedScale: number = 0.72;
   private levelStartTime: number = 0;
 
   private scoreText!: Phaser.GameObjects.Text;
@@ -46,8 +49,8 @@ export class GameScene extends Phaser.Scene {
     this.coinsCollected = 0;
     this.combo = 1;
     this.runDistance = 0;
-    this.targetDistance = 14000 + this.levelId * 2000; // 50s-75s run duration
-    this.runSpeed = 260 + this.levelId * 15;
+    this.targetDistance = 10000 + this.levelId * 1500; // ~45s-65s run duration
+    this.runSpeed = 210 + this.levelId * 10;
     this.requiredCoins = Math.min(40, 15 + Math.floor(this.levelId * 1.2));
     this.levelStartTime = Date.now();
   }
@@ -87,7 +90,7 @@ export class GameScene extends Phaser.Scene {
 
     // 5. Spawn Item Streams & Obstacles
     this.time.addEvent({
-      delay: Math.max(700, 1400 - this.levelId * 30),
+      delay: Math.max(850, 1500 - this.levelId * 30),
       callback: () => this.spawnTrackObject(),
       loop: true
     });
@@ -259,11 +262,12 @@ export class GameScene extends Phaser.Scene {
 
   public update(time: number, delta: number): void {
     // 1. Scroll Track & Hero Update
-    this.trackManager.update(delta, this.runSpeed);
+    const effectiveSpeed = this.runSpeed * this.speedScale;
+    this.trackManager.update(delta, effectiveSpeed);
     this.hero.update(time, delta);
 
-    // 2. Increment Distance Progress
-    this.runDistance += this.runSpeed * delta * 0.001;
+    // 2. Increment Distance Progress (scaled)
+    this.runDistance += effectiveSpeed * delta * 0.001;
     this.updateDistanceBar();
 
     if (this.runDistance >= this.targetDistance) {
@@ -279,8 +283,8 @@ export class GameScene extends Phaser.Scene {
     objects.forEach(obj => {
       if (!obj.active) return;
 
-      // Move object down track
-      obj.y += this.runSpeed * delta * 0.001 * 60;
+      // Move object down track (scaled)
+      obj.y += effectiveSpeed * (delta / 1000) * 1.5;
 
       // MAGNETIC ATTRACTION CORE MECHANIC!
       if (obj.objectCategory === 'coin' || obj.objectCategory === 'crystal' || (this.hero.isSuperMagnet && obj.objectCategory !== 'obstacle')) {

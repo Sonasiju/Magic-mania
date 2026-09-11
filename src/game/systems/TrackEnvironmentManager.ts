@@ -36,7 +36,7 @@ export class TrackEnvironmentManager {
     const width = this.scene.cameras.main.width;
     const height = this.scene.cameras.main.height;
 
-    this.scrollOffset = (this.scrollOffset + speed * delta * 0.001 * 60) % 80;
+    this.scrollOffset = (this.scrollOffset + speed * (delta / 1000) * 1.5) % 80;
 
     // Clear and redraw scrolling 3-Lane Track
     this.bgGraphics.clear();
@@ -72,7 +72,7 @@ export class TrackEnvironmentManager {
     // Scroll Side Props downward
     this.sidePropsGroup.getChildren().forEach(child => {
       const prop = child as Phaser.GameObjects.Sprite;
-      prop.y += speed * delta * 0.001 * 60;
+      prop.y += speed * (delta / 1000) * 1.5;
       if (prop.y > height + 80) {
         prop.y = -80;
       }
