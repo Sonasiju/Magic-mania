@@ -37,23 +37,32 @@ html, body {
   justify-content: center;
   align-items: center;
   position: relative;
+  background: 
+    radial-gradient(circle at 50% 20%, rgba(0, 240, 255, 0.15) 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 119, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 10% 70%, rgba(234, 179, 8, 0.08) 0%, transparent 45%),
+    linear-gradient(180deg, #03050c 0%, #080c1a 50%, #030409 100%);
 }
 
 #game-container {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: 96vw;
+  height: 94vh;
   max-width: 1280px;
   max-height: 720px;
   display: flex;
   justify-content: center;
   align-items: center;
   box-shadow: 
-    0 0 50px rgba(0, 240, 255, 0.2),
-    0 0 100px rgba(255, 0, 119, 0.1);
-  border-radius: 12px;
+    0 20px 60px rgba(0, 0, 0, 0.8),
+    0 0 80px rgba(0, 240, 255, 0.25),
+    0 0 140px rgba(255, 0, 119, 0.15),
+    inset 0 0 2px rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(0, 240, 255, 0.3);
+  border: 1.5px solid rgba(0, 240, 255, 0.4);
+  backdrop-filter: blur(12px);
+  background: rgba(10, 14, 28, 0.95);
 }
 
 #game-container canvas {
@@ -61,6 +70,7 @@ html, body {
   width: 100% !important;
   height: 100% !important;
   object-fit: contain;
+  border-radius: 14px;
 }
 
 /* Scrollbar styles */

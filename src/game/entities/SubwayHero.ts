@@ -10,7 +10,7 @@ export class SubwayHero extends Phaser.GameObjects.Container {
   public lives: number = 3;
   public magneticPower: number = 100;
   public maxPower: number = 100;
-  public attractionRadius: number = 260;
+  public attractionRadius: number = 280;
 
   // Power-up States
   public hasShield: boolean = false;
@@ -30,11 +30,11 @@ export class SubwayHero extends Phaser.GameObjects.Container {
     this.body.setCircle(24, -24, -24);
     this.body.setCollideWorldBounds(true);
 
-    // Shield Aura Graphic
-    this.shieldAura = scene.add.sprite(0, 0, 'shield_aura').setVisible(false);
+    // 1. 3D Shield Aura Graphic
+    this.shieldAura = scene.add.sprite(0, 0, 'shield_aura').setVisible(false).setScale(1.2);
     this.add(this.shieldAura);
 
-    // Hero Runner Sprite
+    // 2. 3D HUMAN RUNNER SPRITE (VIEWED FROM BEHIND IN 3RD PERSON)
     this.heroSprite = scene.add.sprite(0, 0, 'hero_run1');
     this.add(this.heroSprite);
 
@@ -93,7 +93,7 @@ export class SubwayHero extends Phaser.GameObjects.Container {
     });
 
     // Notify scene of pulse to destroy/repel nearby hazardous bombs
-    this.scene.events.emit('HERO_REPEL_PULSE', { x: this.x, y: this.y, radius: 220 });
+    this.scene.events.emit('HERO_REPEL_PULSE', { x: this.x, y: this.y, radius: 240 });
 
     this.scene.time.delayedCall(300, () => {
       this.isPulseActive = false;
@@ -113,7 +113,7 @@ export class SubwayHero extends Phaser.GameObjects.Container {
       this.shieldAura.setVisible(false);
     }
 
-    // 4-Frame Running Animation Loop
+    // 🏃 4-FRAME 3RD-PERSON HUMAN RUNNER ANIMATION LOOP
     if (!this.isPulseActive) {
       this.animTimer += delta;
       if (this.animTimer > 120) {
@@ -125,3 +125,5 @@ export class SubwayHero extends Phaser.GameObjects.Container {
     }
   }
 }
+
+

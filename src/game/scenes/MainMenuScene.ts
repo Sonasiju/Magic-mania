@@ -11,101 +11,169 @@ export class MainMenuScene extends Phaser.Scene {
     const height = this.cameras.main.height;
     const progress = StorageManager.loadProgress();
 
-    // 1. Environmental Backdrop (City Street Theme)
+    // 1. Environmental 3D Cyber Backdrop
     const bg = this.add.graphics();
-    bg.fillStyle(0x0f172a, 1);
+    bg.fillGradientStyle(0x03050c, 0x070b19, 0x0f172a, 0x020408, 1);
     bg.fillRect(0, 0, width, height);
 
-    // Street Asphalt & Sidewalk Floor
-    bg.fillStyle(0x1e293b, 1);
-    bg.fillRect(0, 160, width, height - 160);
-    bg.lineStyle(2, 0xeab308, 0.4);
-    for (let x = 0; x < width; x += 100) {
-      bg.lineBetween(x, height / 2, x + 50, height / 2);
+    // 3D Perspective Floor Grid
+    bg.lineStyle(1.5, 0x00f0ff, 0.25);
+    for (let x = -200; x < width + 200; x += 60) {
+      bg.lineBetween(x, height / 2 + 60, (x - width / 2) * 2.5 + width / 2, height);
+    }
+    for (let y = height / 2 + 60; y < height; y += 35) {
+      bg.lineBetween(0, y, width, y);
     }
 
-    // Floating magnetic energy particles
+    // Floating magnetic particle aura
     this.add.particles(0, 0, 'spark_particle', {
       x: { min: 0, max: width },
       y: { min: 0, max: height },
-      speedX: { min: -20, max: 20 },
-      speedY: { min: -30, max: -10 },
-      scale: { start: 1.5, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      lifespan: 2500,
-      frequency: 80,
+      speedX: { min: -15, max: 15 },
+      speedY: { min: -35, max: -10 },
+      scale: { start: 1.8, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      lifespan: 3000,
+      frequency: 60,
       blendMode: 'ADD'
     });
 
-    // 2. Character Preview Sprite
-    const heroPreview = this.add.sprite(width / 2 - 260, height / 2 + 10, 'player_attract').setScale(2.2);
+    // 2. Holographic 3D Pedestal Stage for Hero
+    const stageX = width / 2 - 280;
+    const stageY = height / 2 + 100;
+
+    const pedestalG = this.add.graphics();
+    // 3D Ellipse Base
+    pedestalG.fillStyle(0x000000, 0.6);
+    pedestalG.fillEllipse(stageX, stageY + 20, 180, 50);
+    pedestalG.fillStyle(0x0f172a, 0.95);
+    pedestalG.lineStyle(3, 0x00f0ff, 0.9);
+    pedestalG.fillEllipse(stageX, stageY, 160, 40);
+    pedestalG.strokeEllipse(stageX, stageY, 160, 40);
+    pedestalG.fillStyle(0x00f0ff, 0.3);
+    pedestalG.fillEllipse(stageX, stageY, 140, 30);
+
+    // Hero 3D Standee Sprite with bobbing tween
+    const heroPreview = this.add.sprite(stageX, stageY - 45, 'player_attract').setScale(2.5);
     this.tweens.add({
       targets: heroPreview,
-      y: height / 2,
-      duration: 1500,
+      y: stageY - 58,
+      duration: 1600,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
 
-    // 3. Title Text
-    this.add.text(width / 2 + 60, height / 2 - 140, 'MAGNET MANIA', {
+    // 3. 3D Embossed Chrome Title Header
+    const titleX = width / 2 + 100;
+    const titleY = height / 2 - 130;
+
+    // Title 3D Drop Shadow
+    this.add.text(titleX + 4, titleY + 4, 'MAGNET MANIA', {
       fontFamily: 'Orbitron',
-      fontSize: '56px',
+      fontSize: '58px',
+      color: '#000000'
+    }).setOrigin(0.5).setAlpha(0.7);
+
+    // Main 3D Title
+    const titleText = this.add.text(titleX, titleY, 'MAGNET MANIA', {
+      fontFamily: 'Orbitron',
+      fontSize: '58px',
       color: '#ffffff',
       stroke: '#00f0ff',
-      strokeThickness: 3
+      strokeThickness: 4
     }).setOrigin(0.5);
 
-    this.add.text(width / 2 + 60, height / 2 - 75, 'HUMAN HERO MAGNETIC ATTRACTION ARCADE', {
-      fontFamily: 'Inter',
-      fontSize: '15px',
+    // Title Sub-heading Banner
+    const subCard = this.add.graphics();
+    subCard.fillStyle(0x0f172a, 0.8);
+    subCard.lineStyle(1.5, 0xff0077, 0.8);
+    subCard.fillRoundedRect(titleX - 220, titleY + 40, 440, 32, 8);
+    subCard.strokeRoundedRect(titleX - 220, titleY + 40, 440, 32, 8);
+
+    this.add.text(titleX, titleY + 56, '3D CYBERNETIC MAGNETIC ARCADE', {
+      fontFamily: 'Orbitron',
+      fontSize: '13px',
       color: '#ff0077',
       letterSpacing: 2
     }).setOrigin(0.5);
 
-    // 4. Play Button
-    const playBtnBg = this.add.graphics();
-    playBtnBg.fillStyle(0x00f0ff, 0.25);
-    playBtnBg.lineStyle(2, 0x00f0ff, 1);
-    playBtnBg.fillRoundedRect(width / 2 - 60, height / 2 - 10, 240, 54, 10);
-    playBtnBg.strokeRoundedRect(width / 2 - 60, height / 2 - 10, 240, 54, 10);
+    // Helper: Draw 3D Beveled Metallic Action Button
+    const create3DButton = (bx: number, by: number, text: string, primaryColor: number, accentColor: number, callback: () => void) => {
+      const bw = 260;
+      const bh = 56;
 
-    const playText = this.add.text(width / 2 + 60, height / 2 + 17, 'PLAY GAME', {
-      fontFamily: 'Orbitron',
-      fontSize: '22px',
-      color: '#ffffff'
-    }).setOrigin(0.5);
+      const btnG = this.add.graphics();
+      
+      const drawState = (isHovered: boolean, isPressed: boolean) => {
+        btnG.clear();
 
-    const playZone = this.add.zone(width / 2 + 60, height / 2 + 17, 240, 54).setInteractive({ useHandCursor: true });
-    playZone.on('pointerdown', () => {
+        const offset = isPressed ? 2 : (isHovered ? -3 : 0);
+
+        // 3D Shadow
+        btnG.fillStyle(0x000000, 0.5);
+        btnG.fillRoundedRect(bx - bw / 2 + 4, by - bh / 2 + 6, bw, bh, 12);
+
+        // Main Bevel Body
+        btnG.fillStyle(isHovered ? accentColor : 0x0f172a, 0.95);
+        btnG.fillRoundedRect(bx - bw / 2, by - bh / 2 + offset, bw, bh, 12);
+
+        // Metallic Rim
+        btnG.lineStyle(isHovered ? 3 : 2, isHovered ? 0xffffff : primaryColor, 1);
+        btnG.strokeRoundedRect(bx - bw / 2, by - bh / 2 + offset, bw, bh, 12);
+
+        // Top Gloss Highlight
+        btnG.fillStyle(0xffffff, 0.2);
+        btnG.fillRoundedRect(bx - bw / 2 + 4, by - bh / 2 + 4 + offset, bw - 8, bh / 2 - 4, 8);
+      };
+
+      drawState(false, false);
+
+      const btnText = this.add.text(bx, by, text, {
+        fontFamily: 'Orbitron',
+        fontSize: '20px',
+        color: '#ffffff'
+      }).setOrigin(0.5);
+
+      const zone = this.add.zone(bx, by, bw, bh).setInteractive({ useHandCursor: true });
+
+      zone.on('pointerover', () => {
+        drawState(true, false);
+        btnText.setScale(1.05);
+      });
+
+      zone.on('pointerout', () => {
+        drawState(false, false);
+        btnText.setScale(1.0);
+      });
+
+      zone.on('pointerdown', () => {
+        drawState(true, true);
+        this.time.delayedCall(120, callback);
+      });
+    };
+
+    // 4. Create 3D Beveled Buttons
+    create3DButton(titleX, height / 2 + 30, 'PLAY GAME ▶', 0x00f0ff, 0x0284c7, () => {
       this.scene.start('GameScene', { levelId: progress.unlockedLevel });
     });
 
-    // 5. Level Select Button
-    const levelBtnBg = this.add.graphics();
-    levelBtnBg.fillStyle(0x0f172a, 0.8);
-    levelBtnBg.lineStyle(2, 0xffb700, 1);
-    levelBtnBg.fillRoundedRect(width / 2 - 60, height / 2 + 60, 240, 54, 10);
-    levelBtnBg.strokeRoundedRect(width / 2 - 60, height / 2 + 60, 240, 54, 10);
-
-    const levelText = this.add.text(width / 2 + 60, height / 2 + 87, 'SELECT LEVEL (20)', {
-      fontFamily: 'Orbitron',
-      fontSize: '18px',
-      color: '#ffb700'
-    }).setOrigin(0.5);
-
-    const levelZone = this.add.zone(width / 2 + 60, height / 2 + 87, 240, 54).setInteractive({ useHandCursor: true });
-    levelZone.on('pointerdown', () => {
+    create3DButton(titleX, height / 2 + 105, 'SELECT LEVEL (20)', 0xffb700, 0xd97706, () => {
       this.scene.start('LevelSelectScene');
     });
 
-    // 6. Statistics Footer
+    // 5. Glassmorphic Stat Footer Panel
     const totalStars = Object.values(progress.levelStars).reduce((acc, curr) => acc + curr, 0);
-    this.add.text(width / 2, height - 50, `HIGH SCORE: ${progress.highScore}  |  TOTAL STARS: ⭐ ${totalStars}/60  |  UNLOCKED: LEVEL ${progress.unlockedLevel}/20`, {
+    const footerG = this.add.graphics();
+    footerG.fillStyle(0x0f172a, 0.85);
+    footerG.lineStyle(1.5, 0x00f0ff, 0.5);
+    footerG.fillRoundedRect(width / 2 - 320, height - 58, 640, 42, 10);
+    footerG.strokeRoundedRect(width / 2 - 320, height - 58, 640, 42, 10);
+
+    this.add.text(width / 2, height - 37, `HIGH SCORE: ${progress.highScore}  |  TOTAL STARS: ⭐ ${totalStars}/60  |  UNLOCKED: LEVEL ${progress.unlockedLevel}/20`, {
       fontFamily: 'Inter',
       fontSize: '14px',
-      color: '#94a3b8'
+      color: '#e2e8f0'
     }).setOrigin(0.5);
   }
 }

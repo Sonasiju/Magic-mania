@@ -99,55 +99,78 @@ export class GameScene extends Phaser.Scene {
   private setupHUD(): void {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
+    const hudY = height - 78;
 
-    // Glass HUD Panel
+    // 1. Glassmorphic Cyber Bottom HUD Panel (Translucent Dark Navy with Neon Glow)
     const hudPanel = this.add.graphics();
-    hudPanel.fillStyle(0x0f172a, 0.85);
-    hudPanel.lineStyle(1.5, 0x00f0ff, 0.4);
-    hudPanel.fillRoundedRect(16, 12, width - 32, 60, 10);
-    hudPanel.strokeRoundedRect(16, 12, width - 32, 60, 10);
+    hudPanel.fillStyle(0x090d16, 0.92);
+    hudPanel.lineStyle(2, 0x00f0ff, 0.9);
+    hudPanel.fillRoundedRect(12, hudY, width - 24, 66, 14);
+    hudPanel.strokeRoundedRect(12, hudY, width - 24, 66, 14);
 
-    // Top-Left: ❤️ ❤️ ❤️ Hearts
-    this.livesContainer = this.add.container(40, 42);
+    // Inner Specular Accent Line
+    hudPanel.lineStyle(1, 0xffffff, 0.35);
+    hudPanel.strokeRoundedRect(14, hudY + 2, width - 28, 62, 12);
+
+    // Bottom-Left: ❤️ Lives Badge Container
+    const livesBadge = this.add.graphics();
+    livesBadge.fillStyle(0x1e1b4b, 0.9);
+    livesBadge.lineStyle(1.5, 0xff0077, 0.8);
+    livesBadge.fillRoundedRect(22, hudY + 8, 110, 48, 10);
+    livesBadge.strokeRoundedRect(22, hudY + 8, 110, 48, 10);
+
+    this.add.text(77, hudY + 18, 'LIVES', {
+      fontFamily: 'Orbitron',
+      fontSize: '10px',
+      color: '#ff0077'
+    }).setOrigin(0.5);
+
+    this.livesContainer = this.add.container(77, hudY + 38);
     this.updateLivesDisplay();
 
-    // Top-Center: Distance Finish Line Progress Bar
-    this.add.text(width / 2, 24, `MISSION LEVEL ${this.levelId}: ${this.envInfo.themeName}`, {
+    // Bottom-Center: 🏁 Mission Progress Header Bar
+    this.add.text(width / 2, hudY + 14, `MISSION ${this.levelId}: ${this.envInfo.themeName}`, {
       fontFamily: 'Orbitron',
-      fontSize: '14px',
+      fontSize: '12px',
       color: '#00f0ff'
     }).setOrigin(0.5);
 
     this.distanceProgressBar = this.add.graphics();
-    this.distancePercentText = this.add.text(width / 2, 45, '0% FINISH', {
+    this.distancePercentText = this.add.text(width / 2, hudY + 36, '0% FINISH', {
       fontFamily: 'Orbitron',
-      fontSize: '12px',
+      fontSize: '11px',
       color: '#ffffff'
     }).setOrigin(0.5);
 
     this.updateDistanceBar();
 
-    // Top-Right: ⭐ Score & Coins
-    this.scoreText = this.add.text(width - 240, 24, `⭐ SCORE: ${this.score}`, {
+    // Bottom-Right: ⭐ Score & 🪙 Coins Glass Badges
+    const scoreBadge = this.add.graphics();
+    scoreBadge.fillStyle(0x1e1b4b, 0.9);
+    scoreBadge.lineStyle(1.5, 0xf59e0b, 0.8);
+    scoreBadge.fillRoundedRect(width - 250, hudY + 8, 225, 48, 10);
+    scoreBadge.strokeRoundedRect(width - 250, hudY + 8, 225, 48, 10);
+
+    this.scoreText = this.add.text(width - 238, hudY + 15, `⭐ SCORE: ${this.score}`, {
       fontFamily: 'Orbitron',
-      fontSize: '16px',
+      fontSize: '15px',
       color: '#ffb700'
     });
 
-    this.coinsText = this.add.text(width - 240, 46, `COINS: ${this.coinsCollected}/${this.requiredCoins}`, {
+    this.coinsText = this.add.text(width - 238, hudY + 36, `🪙 COINS: ${this.coinsCollected}/${this.requiredCoins}`, {
       fontFamily: 'Inter',
-      fontSize: '13px',
-      color: '#e2e8f0'
+      fontSize: '12px',
+      color: '#38bdf8'
     });
 
-    // Magnet Power Meter Bar
+    // Magnet Power Gauge Meter
     this.powerBarGraphics = this.add.graphics();
     this.updatePowerBar();
 
-    // Dynamic SPACEBAR / TAP TO REJECT HAZARD Prompt
-    this.rejectPromptText = this.add.text(width / 2, height - 30, 'PRESS SPACEBAR / TAP TO REJECT & BLAST BOMBS! 💥', {
+    // Dynamic SPACEBAR / TAP TO REJECT HAZARD Prompt (Floating Above Bottom HUD)
+    this.rejectPromptText = this.add.text(width / 2, hudY - 22, '⚡ PRESS SPACEBAR / TAP TO REJECT & BLAST BOMBS! ⚡', {
       fontFamily: 'Orbitron',
-      fontSize: '13px',
+      fontSize: '12px',
       color: '#00f0ff',
       stroke: '#05070e',
       strokeThickness: 3
@@ -155,8 +178,8 @@ export class GameScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: this.rejectPromptText,
-      alpha: 0.4,
-      duration: 800,
+      alpha: 0.35,
+      duration: 750,
       yoyo: true,
       repeat: -1
     });
@@ -171,8 +194,8 @@ export class GameScene extends Phaser.Scene {
     this.livesContainer.removeAll(true);
     for (let i = 0; i < 3; i++) {
       const active = i < this.hero.lives;
-      const heart = this.add.text(i * 26, 0, active ? '❤️' : '🖤', {
-        fontSize: '18px'
+      const heart = this.add.text((i - 1) * 26, 0, active ? '❤️' : '🖤', {
+        fontSize: '16px'
       }).setOrigin(0.5);
       this.livesContainer.add(heart);
     }
@@ -180,54 +203,61 @@ export class GameScene extends Phaser.Scene {
 
   private updateDistanceBar(): void {
     const width = this.cameras.main.width;
-    const barX = width / 2 - 120;
-    const barY = 38;
-    const barW = 240;
+    const height = this.cameras.main.height;
+    const hudY = height - 78;
+    const barX = width / 2 - 130;
+    const barY = hudY + 28;
+    const barW = 260;
     const barH = 14;
 
     this.distanceProgressBar.clear();
-    this.distanceProgressBar.fillStyle(0x1e293b, 1);
-    this.distanceProgressBar.fillRoundedRect(barX, barY, barW, barH, 4);
+    // Track Bar Background
+    this.distanceProgressBar.fillStyle(0x0f172a, 1);
+    this.distanceProgressBar.fillRoundedRect(barX, barY, barW, barH, 5);
 
     const ratio = Phaser.Math.Clamp(this.runDistance / this.targetDistance, 0, 1);
+    // Glowing Cyan Progress Fill
     this.distanceProgressBar.fillStyle(0x00f0ff, 1);
-    this.distanceProgressBar.fillRoundedRect(barX, barY, barW * ratio, barH, 4);
-    this.distanceProgressBar.lineStyle(1.5, 0x00f0ff, 0.6);
-    this.distanceProgressBar.strokeRoundedRect(barX, barY, barW, barH, 4);
+    this.distanceProgressBar.fillRoundedRect(barX, barY, barW * ratio, barH, 5);
+    this.distanceProgressBar.lineStyle(1.5, 0x00f0ff, 0.9);
+    this.distanceProgressBar.strokeRoundedRect(barX, barY, barW, barH, 5);
 
     this.distancePercentText.setText(`${Math.floor(ratio * 100)}% FINISH`);
   }
 
   private updatePowerBar(): void {
-    const barX = 180;
+    const width = this.cameras.main.width;
+    const barX = 145;
     const barY = 38;
-    const barW = 100;
-    const barH = 14;
+    const barW = 90;
+    const barH = 12;
 
     this.powerBarGraphics.clear();
-    this.powerBarGraphics.fillStyle(0x1e293b, 1);
+    this.powerBarGraphics.fillStyle(0x0f172a, 1);
     this.powerBarGraphics.fillRoundedRect(barX, barY, barW, barH, 4);
 
     const ratio = Math.max(0, this.hero.magneticPower / this.hero.maxPower);
-    this.powerBarGraphics.fillStyle(0x38bdf8, 1);
+    this.powerBarGraphics.fillStyle(0xff0077, 1);
     this.powerBarGraphics.fillRoundedRect(barX, barY, barW * ratio, barH, 4);
-    this.powerBarGraphics.lineStyle(1, 0x38bdf8, 0.6);
+    this.powerBarGraphics.lineStyle(1.5, 0xff0077, 0.8);
     this.powerBarGraphics.strokeRoundedRect(barX, barY, barW, barH, 4);
   }
 
   private spawnTrackObject(): void {
     const lane = Math.floor(Math.random() * 3);
-    const spawnX = TrackEnvironmentManager.LANE_X[lane];
-    const spawnY = -60;
+    const spawnY = TrackEnvironmentManager.TOP_Y;
+    const spawnX = TrackEnvironmentManager.getLaneXAtY(lane, spawnY);
+    const initialScale = TrackEnvironmentManager.getScaleAtY(spawnY);
 
     const rand = Math.random();
 
     if (rand < 0.45) {
       // Stream of Coins
       for (let i = 0; i < 3; i++) {
-        const coin = this.objectsGroup.create(spawnX, spawnY - i * 45, 'item_coin') as MovingObject;
+        const coin = this.objectsGroup.create(spawnX, spawnY - i * 35, 'item_coin') as MovingObject;
         coin.objectCategory = 'coin';
         coin.lane = lane;
+        coin.setScale(initialScale);
         coin.body.setCircle(14);
       }
     } else if (rand < 0.70) {
@@ -237,12 +267,14 @@ export class GameScene extends Phaser.Scene {
       const obs = this.objectsGroup.create(spawnX, spawnY, chosenKey) as MovingObject;
       obs.objectCategory = 'obstacle';
       obs.lane = lane;
+      obs.setScale(initialScale);
       obs.body.setSize(obs.width * 0.8, obs.height * 0.8);
     } else if (rand < 0.88) {
       // Magnetic Bomb hazard
       const bomb = this.objectsGroup.create(spawnX, spawnY, 'obs_bomb') as MovingObject;
       bomb.objectCategory = 'bomb';
       bomb.lane = lane;
+      bomb.setScale(initialScale);
       bomb.body.setCircle(16);
     } else {
       // Power-up
@@ -256,6 +288,7 @@ export class GameScene extends Phaser.Scene {
       pow.objectCategory = 'powerup';
       pow.powerType = chosen.type;
       pow.lane = lane;
+      pow.setScale(initialScale);
       pow.body.setCircle(16);
     }
   }
@@ -275,7 +308,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // 3. Move Oncoming Track Objects Downward
+    // 3. Move Oncoming Track Objects Downward in 3D Perspective
     this.beamGraphics.clear();
     const gauntletPos = new Phaser.Math.Vector2(this.hero.x, this.hero.y);
 
@@ -283,33 +316,59 @@ export class GameScene extends Phaser.Scene {
     objects.forEach(obj => {
       if (!obj.active) return;
 
-      // Move object down track (scaled)
+      // Move object down track
       obj.y += effectiveSpeed * (delta / 1000) * 1.5;
 
+      // 3D Perspective Scaling & Converging Lane Position
+      const targetScale = TrackEnvironmentManager.getScaleAtY(obj.y);
+
+      // ALIVE OBJECT ANIMATIONS: Floating Levitation, Bobbing & Spinning
+      const levitationBob = Math.sin(time * 0.006 + obj.x * 0.1) * 7;
+
+      if (obj.objectCategory === 'coin') {
+        obj.rotation += 0.03; // Metallic coin spin
+        obj.setScale(targetScale * (1 + Math.sin(time * 0.008 + obj.y) * 0.08));
+      } else if (obj.objectCategory === 'powerup') {
+        obj.rotation += 0.015; // Glass powerup orb rotation
+        obj.setScale(targetScale * (1 + Math.sin(time * 0.01) * 0.12));
+      } else if (obj.objectCategory === 'bomb') {
+        // Breathing bomb hazard pulse
+        obj.setScale(targetScale * (1 + Math.sin(time * 0.012) * 0.15));
+      } else {
+        obj.setScale(targetScale);
+      }
+
       // MAGNETIC ATTRACTION CORE MECHANIC!
+      let isPulled = false;
       if (obj.objectCategory === 'coin' || obj.objectCategory === 'crystal' || (this.hero.isSuperMagnet && obj.objectCategory !== 'obstacle')) {
         const dist = Phaser.Math.Distance.Between(this.hero.x, this.hero.y, obj.x, obj.y);
         const radius = this.hero.isSuperMagnet ? 600 : this.hero.attractionRadius;
 
         if (dist <= radius) {
-          // Gravitational pull toward hero
-          const pullAngle = Phaser.Math.Angle.Between(obj.x, obj.y, this.hero.x, this.hero.y);
-          obj.x += Math.cos(pullAngle) * 12;
-          obj.y += Math.sin(pullAngle) * 12;
+          isPulled = true;
+          // Gravitational pull toward 3rd-person hero's magnet
+          const pullAngle = Phaser.Math.Angle.Between(obj.x, obj.y, this.hero.x + 22, this.hero.y - 12);
+          obj.x += Math.cos(pullAngle) * 16;
+          obj.y += Math.sin(pullAngle) * 16;
 
-          // Electric Bezier Magnetic Force Arc Visual
-          this.beamGraphics.lineStyle(2, 0x00f0ff, 0.85);
+          // Electric Bezier Magnetic Force Arc Visual to hero's magnet tip
+          this.beamGraphics.lineStyle(3, 0x00f0ff, 0.95);
           const curve = new Phaser.Curves.QuadraticBezier(
-            new Phaser.Math.Vector2(gauntletPos.x, gauntletPos.y),
-            new Phaser.Math.Vector2((gauntletPos.x + obj.x) / 2, (gauntletPos.y + obj.y) / 2 - 20),
+            new Phaser.Math.Vector2(gauntletPos.x + 22, gauntletPos.y - 12),
+            new Phaser.Math.Vector2((gauntletPos.x + obj.x) / 2, (gauntletPos.y + obj.y) / 2 - 25),
             new Phaser.Math.Vector2(obj.x, obj.y)
           );
           curve.draw(this.beamGraphics);
         }
       }
 
+      if (!isPulled) {
+        // Track along 3D Perspective Lane Slope with Floating Levitation
+        obj.x = TrackEnvironmentManager.getLaneXAtY(obj.lane, obj.y) + (obj.objectCategory !== 'obstacle' ? Math.cos(time * 0.004 + obj.y) * 4 : 0);
+      }
+
       // Cleanup objects off screen
-      if (obj.y > this.cameras.main.height + 100) {
+      if (obj.y > this.cameras.main.height + 60) {
         obj.destroy();
       }
     });
