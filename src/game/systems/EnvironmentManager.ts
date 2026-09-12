@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
 
+export type SceneryType = 'forest' | 'space' | 'mountain' | 'city';
+
 export interface EnvironmentInfo {
   themeName: string;
+  sceneryType: SceneryType;
   bgColor: number;
   floorColor: number;
   gridLineColor: number;
@@ -11,26 +14,33 @@ export interface EnvironmentInfo {
 
 export class EnvironmentManager {
   private static themeMap: Record<number, EnvironmentInfo> = {
-    1: { themeName: 'CITY STREET', bgColor: 0x0f172a, floorColor: 0x1e293b, gridLineColor: 0xeab308, wallColor: 0x334155, propKeys: ['prop_car', 'prop_bench'] },
-    2: { themeName: 'DOWNTOWN ALLEY', bgColor: 0x0f172a, floorColor: 0x1e293b, gridLineColor: 0x64748b, wallColor: 0x475569, propKeys: ['prop_car', 'prop_bench', 'prop_box'] },
-    3: { themeName: 'AUTO WORKSHOP', bgColor: 0x18181b, floorColor: 0x27272a, gridLineColor: 0x3f3f46, wallColor: 0x52525b, propKeys: ['prop_box', 'prop_car'] },
-    4: { themeName: 'REPAIR BAY', bgColor: 0x18181b, floorColor: 0x27272a, gridLineColor: 0x00f0ff, wallColor: 0x3f3f46, propKeys: ['prop_box', 'prop_bench'] },
-    5: { themeName: 'CARGO WAREHOUSE', bgColor: 0x1c1917, floorColor: 0x292524, gridLineColor: 0x78350f, wallColor: 0x44403c, propKeys: ['prop_box', 'prop_box'] },
-    6: { themeName: 'STORAGE BAY B', bgColor: 0x1c1917, floorColor: 0x292524, gridLineColor: 0xd97706, wallColor: 0x57534e, propKeys: ['prop_box', 'prop_cart'] },
-    7: { themeName: 'CONSTRUCTION SITE', bgColor: 0x1c1917, floorColor: 0x451a03, gridLineColor: 0xf97316, wallColor: 0x78350f, propKeys: ['prop_cone', 'prop_box'] },
-    8: { themeName: 'SCAFFOLD TOWER', bgColor: 0x1c1917, floorColor: 0x451a03, gridLineColor: 0xfacc15, wallColor: 0x92400e, propKeys: ['prop_cone', 'prop_bench'] },
-    9: { themeName: 'TRAIN STATION PLATFORM', bgColor: 0x090d16, floorColor: 0x1e293b, gridLineColor: 0xeab308, wallColor: 0x334155, propKeys: ['prop_bench', 'prop_bench'] },
-    10: { themeName: 'SUBWAY TERMINAL', bgColor: 0x090d16, floorColor: 0x1e293b, gridLineColor: 0x00f0ff, wallColor: 0x475569, propKeys: ['prop_bench', 'prop_box'] },
-    11: { themeName: 'SUPERMARKET STORAGE', bgColor: 0x0f172a, floorColor: 0x334155, gridLineColor: 0x38bdf8, wallColor: 0x475569, propKeys: ['prop_cart', 'prop_box'] },
-    12: { themeName: 'GROCERY LOADING DOCK', bgColor: 0x0f172a, floorColor: 0x334155, gridLineColor: 0x60a5fa, wallColor: 0x64748b, propKeys: ['prop_cart', 'prop_box'] },
-    13: { themeName: 'AUTO GARAGE', bgColor: 0x18181b, floorColor: 0x27272a, gridLineColor: 0xef4444, wallColor: 0x52525b, propKeys: ['prop_car', 'prop_box'] },
-    14: { themeName: 'TUNING SHOP', bgColor: 0x18181b, floorColor: 0x27272a, gridLineColor: 0xf59e0b, wallColor: 0x3f3f46, propKeys: ['prop_car', 'prop_bench'] },
-    15: { themeName: 'HEAVY FACTORY', bgColor: 0x0f172a, floorColor: 0x1e1b4b, gridLineColor: 0x6366f1, wallColor: 0x312e81, propKeys: ['prop_box', 'prop_reactor'] },
-    16: { themeName: 'ASSEMBLY LINE', bgColor: 0x0f172a, floorColor: 0x1e1b4b, gridLineColor: 0xa855f7, wallColor: 0x4c1d95, propKeys: ['prop_reactor', 'prop_box'] },
-    17: { themeName: 'SCRAP JUNKYARD', bgColor: 0x1c1917, floorColor: 0x292524, gridLineColor: 0xb45309, wallColor: 0x44403c, propKeys: ['prop_car', 'prop_box'] },
-    18: { themeName: 'CRUSHING YARD', bgColor: 0x1c1917, floorColor: 0x292524, gridLineColor: 0xef4444, wallColor: 0x57534e, propKeys: ['prop_car', 'prop_cone'] },
-    19: { themeName: 'MAGNETIC LAB', bgColor: 0x030712, floorColor: 0x0b0f19, gridLineColor: 0x00f0ff, wallColor: 0x1e293b, propKeys: ['prop_reactor', 'prop_reactor'] },
-    20: { themeName: 'ULTIMATE MAGNET CORE', bgColor: 0x030712, floorColor: 0x090514, gridLineColor: 0xff0077, wallColor: 0x3b0764, propKeys: ['prop_reactor', 'prop_reactor'] }
+    // 🌲 Theme 1: Lush Swaying Green Grass Meadow & Moving Sky Clouds (Levels 1 - 5)
+    1: { themeName: 'SUNRISE GRASS MEADOW', sceneryType: 'forest', bgColor: 0x38bdf8, floorColor: 0x15803d, gridLineColor: 0x4ade80, wallColor: 0x166534, propKeys: ['prop_tree_oak', 'prop_tree_birch', 'prop_tree_pine', 'prop_tree_sakura', 'prop_flower_red', 'prop_flower_yellow', 'prop_grass_tuft'] },
+    2: { themeName: 'WINDY PRAIRIE RUN', sceneryType: 'forest', bgColor: 0x38bdf8, floorColor: 0x166534, gridLineColor: 0x86efac, wallColor: 0x15803d, propKeys: ['prop_tree_oak', 'prop_tree_pine', 'prop_flower_yellow', 'prop_grass_tuft', 'prop_tree_birch', 'prop_tree_sakura'] },
+    3: { themeName: 'MORNING FLOWER MEADOW', sceneryType: 'forest', bgColor: 0x38bdf8, floorColor: 0x15803d, gridLineColor: 0xfde047, wallColor: 0x166534, propKeys: ['prop_tree_birch', 'prop_tree_oak', 'prop_tree_pine', 'prop_flower_red', 'prop_grass_tuft', 'prop_tree_sakura'] },
+    4: { themeName: 'EMERALD BREEZE WOODS', sceneryType: 'forest', bgColor: 0x38bdf8, floorColor: 0x166534, gridLineColor: 0x34d399, wallColor: 0x15803d, propKeys: ['prop_tree_pine', 'prop_tree_oak', 'prop_flower_yellow', 'prop_tree_birch', 'prop_grass_tuft', 'prop_tree_sakura'] },
+    5: { themeName: 'GOLDEN SKY MEADOW', sceneryType: 'forest', bgColor: 0x38bdf8, floorColor: 0x15803d, gridLineColor: 0x4ade80, wallColor: 0x166534, propKeys: ['prop_tree_oak', 'prop_tree_pine', 'prop_tree_birch', 'prop_flower_red', 'prop_grass_tuft', 'prop_tree_sakura'] },
+
+    // 🌌 Theme 2: Cosmic Space & Nebulae / Stars (Levels 6 - 10)
+    6: { themeName: 'COSMIC VOID', sceneryType: 'space', bgColor: 0x030712, floorColor: 0x0b0f19, gridLineColor: 0x00f0ff, wallColor: 0x1e1b4b, propKeys: ['prop_crystal_cosmic', 'prop_rock_mossy', 'prop_tree_sakura', 'prop_crystal_cosmic'] },
+    7: { themeName: 'NEBULA STARFIELD', sceneryType: 'space', bgColor: 0x030712, floorColor: 0x0f172a, gridLineColor: 0xa855f7, wallColor: 0x312e81, propKeys: ['prop_crystal_cosmic', 'prop_tree_birch', 'prop_rock_mossy', 'prop_flower_red'] },
+    8: { themeName: 'STARDUST GALAXY', sceneryType: 'space', bgColor: 0x050515, floorColor: 0x090514, gridLineColor: 0xff0077, wallColor: 0x4c1d95, propKeys: ['prop_crystal_cosmic', 'prop_rock_mossy', 'prop_tree_oak', 'prop_crystal_cosmic'] },
+    9: { themeName: 'SATURN RING WAY', sceneryType: 'space', bgColor: 0x030712, floorColor: 0x0b0f19, gridLineColor: 0xf59e0b, wallColor: 0x1e293b, propKeys: ['prop_crystal_cosmic', 'prop_tree_pine', 'prop_rock_mossy', 'prop_flower_yellow'] },
+    10: { themeName: 'DEEP SPACE CORE', sceneryType: 'space', bgColor: 0x020308, floorColor: 0x070913, gridLineColor: 0x38bdf8, wallColor: 0x0f172a, propKeys: ['prop_crystal_cosmic', 'prop_rock_mossy', 'prop_tree_sakura', 'prop_crystal_cosmic'] },
+
+    // 🏔️ Theme 3: Snow Mountain & Floral Valley (Levels 11 - 15)
+    11: { themeName: 'SNOW PEAK PASS', sceneryType: 'mountain', bgColor: 0x0f172a, floorColor: 0x1e293b, gridLineColor: 0x38bdf8, wallColor: 0x334155, propKeys: ['prop_tree_sakura', 'prop_tree_pine', 'prop_flower_red', 'prop_tree_oak', 'prop_rock_mossy'] },
+    12: { themeName: 'SAKURA VALLEY', sceneryType: 'mountain', bgColor: 0x1e1b4b, floorColor: 0x312e81, gridLineColor: 0xf472b6, wallColor: 0x4c1d95, propKeys: ['prop_tree_sakura', 'prop_tree_oak', 'prop_flower_yellow', 'prop_tree_pine', 'prop_flower_red'] },
+    13: { themeName: 'ALPINE MEADOW', sceneryType: 'mountain', bgColor: 0x0f172a, floorColor: 0x1e293b, gridLineColor: 0xa7f3d0, wallColor: 0x047857, propKeys: ['prop_tree_pine', 'prop_tree_sakura', 'prop_flower_red', 'prop_rock_mossy', 'prop_tree_birch'] },
+    14: { themeName: 'FLOWER RIDGE', sceneryType: 'mountain', bgColor: 0x1e1b4b, floorColor: 0x312e81, gridLineColor: 0xf43f5e, wallColor: 0x881337, propKeys: ['prop_tree_sakura', 'prop_flower_red', 'prop_flower_yellow', 'prop_tree_oak', 'prop_tree_birch'] },
+    15: { themeName: 'SUNSET PEAKS', sceneryType: 'mountain', bgColor: 0x1e1b4b, floorColor: 0x311042, gridLineColor: 0xfb923c, wallColor: 0x581c87, propKeys: ['prop_tree_pine', 'prop_tree_sakura', 'prop_flower_red', 'prop_rock_mossy', 'prop_tree_oak'] },
+
+    // 🏙️ Theme 4: Cyber City Metro (Levels 16 - 20)
+    16: { themeName: 'CYBER CITY RUN', sceneryType: 'city', bgColor: 0x030712, floorColor: 0x0f172a, gridLineColor: 0x00f0ff, wallColor: 0x1e293b, propKeys: ['prop_neon_palm', 'prop_cyber_billboard', 'prop_tree_oak', 'prop_neon_palm'] },
+    17: { themeName: 'NEON METROPOLIS', sceneryType: 'city', bgColor: 0x030712, floorColor: 0x0f172a, gridLineColor: 0xff0077, wallColor: 0x311042, propKeys: ['prop_cyber_billboard', 'prop_neon_palm', 'prop_tree_birch', 'prop_cyber_billboard'] },
+    18: { themeName: 'SKYLINE HIGHWAY', sceneryType: 'city', bgColor: 0x050716, floorColor: 0x0b0f19, gridLineColor: 0xeab308, wallColor: 0x1e293b, propKeys: ['prop_neon_palm', 'prop_cyber_billboard', 'prop_tree_pine', 'prop_neon_palm'] },
+    19: { themeName: 'MAGNETIC LAB METRO', sceneryType: 'city', bgColor: 0x030712, floorColor: 0x0b0f19, gridLineColor: 0x00f0ff, wallColor: 0x1e293b, propKeys: ['prop_cyber_billboard', 'prop_neon_palm', 'prop_rock_mossy', 'prop_cyber_billboard'] },
+    20: { themeName: 'ULTIMATE CYBER CORE', sceneryType: 'city', bgColor: 0x030712, floorColor: 0x090514, gridLineColor: 0xff0077, wallColor: 0x3b0764, propKeys: ['prop_neon_palm', 'prop_cyber_billboard', 'prop_tree_sakura', 'prop_neon_palm'] }
   };
 
   public static getEnvironmentInfo(levelId: number): EnvironmentInfo {

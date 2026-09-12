@@ -51,12 +51,34 @@ export class LevelSelectScene extends Phaser.Scene {
       const starsEarned = progress.levelStars[i] || 0;
       const envInfo = EnvironmentManager.getEnvironmentInfo(i);
 
-      // Card Background
+      // 3D Card Graphics
       const cardG = this.add.graphics();
-      cardG.fillStyle(isUnlocked ? 0x0f172a : 0x030712, 0.85);
-      cardG.lineStyle(2, isUnlocked ? 0x00f0ff : 0x334155, isUnlocked ? 0.8 : 0.4);
-      cardG.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 10);
-      cardG.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 10);
+
+      const drawCardState = (isHovered: boolean) => {
+        cardG.clear();
+
+        const offset = isHovered ? -3 : 0;
+
+        // 3D Shadow
+        cardG.fillStyle(0x000000, 0.45);
+        cardG.fillRoundedRect(cx - cardW / 2 + 3, cy - cardH / 2 + 5, cardW, cardH, 12);
+
+        // Glass Body
+        cardG.fillStyle(isUnlocked ? (isHovered ? 0x1e293b : 0x0f172a) : 0x030712, 0.9);
+        cardG.fillRoundedRect(cx - cardW / 2, cy - cardH / 2 + offset, cardW, cardH, 12);
+
+        // Metallic Rim Border
+        cardG.lineStyle(isHovered ? 2.5 : 1.5, isUnlocked ? (isHovered ? 0xffffff : 0x00f0ff) : 0x334155, isUnlocked ? 0.9 : 0.4);
+        cardG.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2 + offset, cardW, cardH, 12);
+
+        // Top Glass Sheen
+        if (isUnlocked) {
+          cardG.fillStyle(0xffffff, 0.12);
+          cardG.fillRoundedRect(cx - cardW / 2 + 2, cy - cardH / 2 + 2 + offset, cardW - 4, cardH / 2 - 2, 8);
+        }
+      };
+
+      drawCardState(false);
 
       // Level Number
       this.add.text(cx - cardW / 2 + 14, cy - cardH / 2 + 12, `LEVEL ${i}`, {
@@ -83,24 +105,16 @@ export class LevelSelectScene extends Phaser.Scene {
         color: isUnlocked ? '#ffb700' : '#ef4444'
       });
 
-      // Interactive Click if Unlocked
+      // Interactive Click & 3D Hover elevation
       if (isUnlocked) {
         const hitArea = this.add.zone(cx, cy, cardW, cardH).setInteractive({ useHandCursor: true });
         
         hitArea.on('pointerover', () => {
-          cardG.clear();
-          cardG.fillStyle(0x00f0ff, 0.25);
-          cardG.lineStyle(3, 0xffffff, 1);
-          cardG.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 10);
-          cardG.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 10);
+          drawCardState(true);
         });
 
         hitArea.on('pointerout', () => {
-          cardG.clear();
-          cardG.fillStyle(0x0f172a, 0.85);
-          cardG.lineStyle(2, 0x00f0ff, 0.8);
-          cardG.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 10);
-          cardG.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 10);
+          drawCardState(false);
         });
 
         hitArea.on('pointerdown', () => {
