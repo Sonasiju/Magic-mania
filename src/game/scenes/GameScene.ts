@@ -12,6 +12,25 @@ interface MovingObject extends Phaser.GameObjects.Sprite {
 }
 
 export class GameScene extends Phaser.Scene {
+  // ═══════════════════════════════════════════════════════
+  // 🎮  DIFFICULTY CONFIGURATION  — tune all values here
+  // ═══════════════════════════════════════════════════════
+  private static readonly DIFFICULTY_CONFIG = {
+    /** Base run speed at Level 1 (pixels/sec before speedScale) */
+    BASE_SPEED: 220,
+    /** Additional speed added per level beyond Level 1 */
+    SPEED_INCREASE_PER_LEVEL: 28,
+    /** Hard cap: speed can never exceed BASE_SPEED × this multiplier */
+    MAX_SPEED_MULTIPLIER: 3.0,
+    /** Global speed scale applied to effective speed (keep < 1 for playability) */
+    SPEED_SCALE: 0.72,
+    /** Base spawn interval in ms at Level 1 */
+    BASE_SPAWN_DELAY: 1500,
+    /** Minimum spawn interval (ms) — prevents impossible overlap */
+    MIN_SPAWN_DELAY: 550,
+  };
+  // ═══════════════════════════════════════════════════════
+
   private hero!: SubwayHero;
   private trackManager!: TrackEnvironmentManager;
   private objectsGroup!: Phaser.Physics.Arcade.Group;
@@ -43,6 +62,21 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
+  /** Calculate the run speed for a given level from the centralized config. */
+  private static getLevelSpeed(level: number): number {
+    const cfg = GameScene.DIFFICULTY_CONFIG;
+    const uncapped = cfg.BASE_SPEED + (level - 1) * cfg.SPEED_INCREASE_PER_LEVEL;
+    return Math.min(uncapped, cfg.BASE_SPEED * cfg.MAX_SPEED_MULTIPLIER);
+  }
+
+  /** Calculate the spawn interval (ms) for a given level. */
+  private static getLevelSpawnDelay(level: number): number {
+    const cfg = GameScene.DIFFICULTY_CONFIG;
+    // Spawn rate tightens as speed rises — inversely proportional to speed ratio
+    const speedRatio = GameScene.getLevelSpeed(level) / cfg.BASE_SPEED;
+    return Math.max(cfg.MIN_SPAWN_DELAY, Math.floor(cfg.BASE_SPAWN_DELAY / speedRatio));
+  }
+
   init(data: { levelId?: number }): void {
     this.levelId = data.levelId || 1;
     this.score = 0;
@@ -50,7 +84,8 @@ export class GameScene extends Phaser.Scene {
     this.combo = 1;
     this.runDistance = 0;
     this.targetDistance = 10000 + this.levelId * 1500; // ~45s-65s run duration
-    this.runSpeed = 210 + this.levelId * 10;
+    this.runSpeed = GameScene.getLevelSpeed(this.levelId);
+    this.speedScale = GameScene.DIFFICULTY_CONFIG.SPEED_SCALE;
     this.requiredCoins = Math.min(40, 15 + Math.floor(this.levelId * 1.2));
     this.levelStartTime = Date.now();
   }
@@ -90,7 +125,7 @@ export class GameScene extends Phaser.Scene {
 
     // 5. Spawn Item Streams & Obstacles
     this.time.addEvent({
-      delay: Math.max(850, 1500 - this.levelId * 30),
+      delay: GameScene.getLevelSpawnDelay(this.levelId),
       callback: () => this.spawnTrackObject(),
       loop: true
     });
