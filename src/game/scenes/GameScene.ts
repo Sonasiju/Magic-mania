@@ -192,7 +192,7 @@ export class GameScene extends Phaser.Scene {
       color: '#ffb700'
     });
 
-    this.coinsText = this.add.text(width - 238, hudY + 36, `🪙 COINS: ${this.coinsCollected}/${this.requiredCoins}`, {
+    this.coinsText = this.add.text(width - 238, hudY + 36, `🪙 COINS: ${this.coinsCollected}`, {
       fontFamily: 'Inter',
       fontSize: '12px',
       color: '#38bdf8'
@@ -483,7 +483,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.scoreText.setText(`⭐ SCORE: ${Math.floor(this.score)}`);
-    this.coinsText.setText(`COINS: ${this.coinsCollected}/${this.requiredCoins}`);
+    this.coinsText.setText(`🪙 COINS: ${this.coinsCollected}`);
     obj.destroy();
   }
 
@@ -507,12 +507,8 @@ export class GameScene extends Phaser.Scene {
 
   private handleLevelCompleted(): void {
     const elapsedSeconds = Math.max(1, Math.floor((Date.now() - this.levelStartTime) / 1000));
-    let stars = 1;
-    if (this.hero.lives === 3 && elapsedSeconds <= 50) {
-      stars = 3;
-    } else if (this.score >= 1200 || this.hero.lives >= 2) {
-      stars = 2;
-    }
+    // Stars = hearts remaining: 3 hearts → 3 stars, 2 hearts → 2 stars, 1 heart → 1 star
+    const stars = Math.max(1, this.hero.lives);
 
     const currentProg = StorageManager.loadProgress();
     const nextLevelId = Math.min(20, this.levelId + 1);

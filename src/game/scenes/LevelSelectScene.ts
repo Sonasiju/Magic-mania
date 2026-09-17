@@ -96,7 +96,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
       // Star Display
       const starText = isUnlocked 
-        ? `${'⭐'.repeat(starsEarned)}${'☆'.repeat(3 - starsEarned)} (${starsEarned}/3)`
+        ? `${'⭐'.repeat(starsEarned)}${'☆'.repeat(3 - starsEarned)}`
         : '🔒 LOCKED';
 
       this.add.text(cx - cardW / 2 + 14, cy - cardH / 2 + 72, starText, {
