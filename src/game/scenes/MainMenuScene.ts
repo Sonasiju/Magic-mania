@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { StorageManager } from '../../storage/localStorage';
+import { AudioManager } from '../systems/AudioManager';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -10,6 +11,9 @@ export class MainMenuScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
     const progress = StorageManager.loadProgress();
+
+    // Start background music loop
+    AudioManager.getInstance().playBGM();
 
     // 1. Environmental 3D Cyber Backdrop
     const bg = this.add.graphics();
@@ -135,19 +139,19 @@ export class MainMenuScene extends Phaser.Scene {
         color: '#ffffff'
       }).setOrigin(0.5);
 
-      const zone = this.add.zone(bx, by, bw, bh).setInteractive({ useHandCursor: true });
+      const hitRect = this.add.rectangle(bx, by, bw, bh, 0x000000, 0).setInteractive({ useHandCursor: true });
 
-      zone.on('pointerover', () => {
+      hitRect.on('pointerover', () => {
         drawState(true, false);
         btnText.setScale(1.05);
       });
 
-      zone.on('pointerout', () => {
+      hitRect.on('pointerout', () => {
         drawState(false, false);
         btnText.setScale(1.0);
       });
 
-      zone.on('pointerdown', () => {
+      hitRect.on('pointerdown', () => {
         drawState(true, true);
         this.time.delayedCall(120, callback);
       });
@@ -160,6 +164,28 @@ export class MainMenuScene extends Phaser.Scene {
 
     create3DButton(titleX, height / 2 + 105, 'SELECT LEVEL (20)', 0xffb700, 0xd97706, () => {
       this.scene.start('LevelSelectScene');
+    });
+
+    // Top-Right Sound Mute / Unmute Button
+    const audioMgr = AudioManager.getInstance();
+    const soundBtnBg = this.add.rectangle(width - 70, 40, 110, 36, 0x0f172a, 0.9)
+      .setStrokeStyle(2, 0x00f0ff, 0.8)
+      .setInteractive({ useHandCursor: true });
+    
+    const soundBtnText = this.add.text(width - 70, 40, audioMgr.isSoundMuted() ? '🔇 MUTED' : '🔊 SOUND', {
+      fontFamily: 'Orbitron',
+      fontSize: '13px',
+      color: audioMgr.isSoundMuted() ? '#ef4444' : '#00f0ff'
+    }).setOrigin(0.5);
+
+    soundBtnBg.on('pointerdown', () => {
+      const muted = audioMgr.toggleMute();
+      soundBtnText.setText(muted ? '🔇 MUTED' : '🔊 SOUND');
+      soundBtnText.setColor(muted ? '#ef4444' : '#00f0ff');
+      soundBtnBg.setStrokeStyle(2, muted ? 0xef4444 : 0x00f0ff, 0.8);
+      if (!muted) {
+        audioMgr.playCoinSFX();
+      }
     });
 
     // 5. Glassmorphic Stat Footer Panel
@@ -177,3 +203,4 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 }
+

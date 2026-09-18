@@ -3,6 +3,7 @@ import { SubwayHero } from '../entities/SubwayHero';
 import { TrackEnvironmentManager } from '../systems/TrackEnvironmentManager';
 import { StorageManager } from '../../storage/localStorage';
 import { EnvironmentManager, EnvironmentInfo } from '../systems/EnvironmentManager';
+import { AudioManager } from '../systems/AudioManager';
 
 interface MovingObject extends Phaser.GameObjects.Sprite {
   body: Phaser.Physics.Arcade.Body;
@@ -45,8 +46,6 @@ export class GameScene extends Phaser.Scene {
   private runDistance: number = 0;
   private targetDistance: number = 1000; // Finish line distance
   private runSpeed: number = 220;
-  // Global speed scale (multiply runSpeed by this to slow/speed the game).
-  // Lower values make incoming objects move slower and distance progress slower.
   private speedScale: number = 0.72;
   private levelStartTime: number = 0;
 
@@ -57,6 +56,10 @@ export class GameScene extends Phaser.Scene {
   private powerBarGraphics!: Phaser.GameObjects.Graphics;
   private livesContainer!: Phaser.GameObjects.Container;
   private rejectPromptText!: Phaser.GameObjects.Text;
+
+  // Pause & Menu State Controls
+  private isPaused: boolean = false;
+  private pauseContainer: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super('GameScene');
@@ -72,7 +75,6 @@ export class GameScene extends Phaser.Scene {
   /** Calculate the spawn interval (ms) for a given level. */
   private static getLevelSpawnDelay(level: number): number {
     const cfg = GameScene.DIFFICULTY_CONFIG;
-    // Spawn rate tightens as speed rises — inversely proportional to speed ratio
     const speedRatio = GameScene.getLevelSpeed(level) / cfg.BASE_SPEED;
     return Math.max(cfg.MIN_SPAWN_DELAY, Math.floor(cfg.BASE_SPAWN_DELAY / speedRatio));
   }
@@ -83,11 +85,13 @@ export class GameScene extends Phaser.Scene {
     this.coinsCollected = 0;
     this.combo = 1;
     this.runDistance = 0;
-    this.targetDistance = 10000 + this.levelId * 1500; // ~45s-65s run duration
+    this.targetDistance = 10000 + this.levelId * 1500;
     this.runSpeed = GameScene.getLevelSpeed(this.levelId);
     this.speedScale = GameScene.DIFFICULTY_CONFIG.SPEED_SCALE;
     this.requiredCoins = Math.min(40, 15 + Math.floor(this.levelId * 1.2));
     this.levelStartTime = Date.now();
+    this.isPaused = false;
+    this.pauseContainer = null;
   }
 
   create(): void {
@@ -96,14 +100,18 @@ export class GameScene extends Phaser.Scene {
 
     this.envInfo = EnvironmentManager.getEnvironmentInfo(this.levelId);
 
-    // 1. 3-Lane Track Scrolling Manager
+    // 1. Start Loopable Background Music cleanly
+    AudioManager.getInstance().playBGM();
+    this.events.once('shutdown', () => AudioManager.getInstance().stopBGM());
+
+    // 2. 3-Lane Track Scrolling Manager
     this.trackManager = new TrackEnvironmentManager(this, this.levelId);
 
-    // 2. Physics & Graphics Layers
+    // 3. Physics & Graphics Layers
     this.beamGraphics = this.add.graphics();
     this.objectsGroup = this.physics.add.group();
 
-    // 3. Create Subway Hero Runner
+    // 4. Create Subway Hero Runner
     this.hero = new SubwayHero(this, TrackEnvironmentManager.LANE_X[1], height - 140);
 
     // Collision setup
@@ -120,13 +128,17 @@ export class GameScene extends Phaser.Scene {
       this.handleRepelPulse(data.x, data.y, data.radius);
     });
 
-    // 4. Polished Runner HUD
+    // 5. Polished Runner HUD & Navigation Controls
     this.setupHUD();
 
-    // 5. Spawn Item Streams & Obstacles
+    // 6. Spawn Item Streams & Obstacles
     this.time.addEvent({
       delay: GameScene.getLevelSpawnDelay(this.levelId),
-      callback: () => this.spawnTrackObject(),
+      callback: () => {
+        if (!this.isPaused) {
+          this.spawnTrackObject();
+        }
+      },
       loop: true
     });
   }
@@ -134,9 +146,110 @@ export class GameScene extends Phaser.Scene {
   private setupHUD(): void {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
+
+    // ═══════════════════════════════════════════════════════
+    // 🔘 TOP UI NAVIGATION & OVERLAY CONTROLS (With Margins)
+    // ═══════════════════════════════════════════════════════
+
+    // Top-Left: ◄ MENU / EXIT Button & Top-Right: ⏸️ PAUSE Button
+    const createNavButton = (bx: number, by: number, label: string, colorHex: number, strokeHex: string, callback: () => void) => {
+      const bw = 120;
+      const bh = 42;
+
+      const btnRect = this.add.rectangle(bx, by, bw, bh, 0x0f172a, 0.95)
+        .setStrokeStyle(2, colorHex, 0.9)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(50);
+
+      const btnText = this.add.text(bx, by, label, {
+        fontFamily: 'Orbitron',
+        fontSize: '14px',
+        color: strokeHex
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(51);
+
+      const trigger = () => {
+        callback();
+      };
+
+      btnRect.on('pointerover', () => {
+        btnRect.setFillStyle(colorHex, 0.95);
+        btnText.setColor('#ffffff');
+      });
+
+      btnText.on('pointerover', () => {
+        btnRect.setFillStyle(colorHex, 0.95);
+        btnText.setColor('#ffffff');
+      });
+
+      btnRect.on('pointerout', () => {
+        btnRect.setFillStyle(0x0f172a, 0.95);
+        btnText.setColor(strokeHex);
+      });
+
+      btnText.on('pointerout', () => {
+        btnRect.setFillStyle(0x0f172a, 0.95);
+        btnText.setColor(strokeHex);
+      });
+
+      btnRect.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+        if (event) event.stopPropagation();
+        trigger();
+      });
+
+      btnText.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+        if (event) event.stopPropagation();
+        trigger();
+      });
+    };
+
+    // Exit Button (Top-Left)
+    createNavButton(75, 35, '◄ MENU', 0xff0077, '#ff0077', () => this.exitToMenu());
+
+    // Sound Button (Top-Right-ish)
+    const audioMgr = AudioManager.getInstance();
+    const soundBtnText = audioMgr.isSoundMuted() ? '🔇 MUTED' : '🔊 SOUND';
+    createNavButton(width - 205, 35, soundBtnText, 0x00f0ff, '#00f0ff', () => {
+      const muted = audioMgr.toggleMute();
+      this.scene.restart({ levelId: this.levelId });
+    });
+
+    // Pause Button (Top-Right)
+    createNavButton(width - 75, 35, '⏸️ PAUSE', 0x00f0ff, '#00f0ff', () => this.togglePause());
+
+    // Top-Center: Prominent Level Indicator Badge
+    const levelBadgeW = 180;
+    const levelBadgeH = 42;
+    const levelBadgeX = width / 2;
+    const levelBadgeY = 35;
+
+    const levelBadgeBg = this.add.rectangle(levelBadgeX, levelBadgeY, levelBadgeW, levelBadgeH, 0x0f172a, 0.95)
+      .setStrokeStyle(2, 0x00f0ff, 0.95)
+      .setDepth(50);
+
+    const levelBadgeG = this.add.graphics().setDepth(50);
+    levelBadgeG.fillStyle(0x00f0ff, 0.15);
+    levelBadgeG.fillRoundedRect(levelBadgeX - levelBadgeW / 2 + 2, levelBadgeY - levelBadgeH / 2 + 2, levelBadgeW - 4, levelBadgeH / 2 - 2, 6);
+
+    this.add.text(levelBadgeX, levelBadgeY - 6, `LEVEL ${this.levelId}`, {
+      fontFamily: 'Orbitron',
+      fontSize: '16px',
+      color: '#ffffff',
+      stroke: '#00f0ff',
+      strokeThickness: 2
+    }).setOrigin(0.5).setDepth(51);
+
+    this.add.text(levelBadgeX, levelBadgeY + 11, `${this.envInfo.themeName.toUpperCase()}`, {
+      fontFamily: 'Inter',
+      fontSize: '9px',
+      color: '#38bdf8'
+    }).setOrigin(0.5).setDepth(51);
+
+    // ═══════════════════════════════════════════════════════
+    // 📊 BOTTOM RUNNER HUD PANEL
+    // ═══════════════════════════════════════════════════════
     const hudY = height - 78;
 
-    // 1. Glassmorphic Cyber Bottom HUD Panel (Translucent Dark Navy with Neon Glow)
+    // Glassmorphic Cyber Bottom HUD Panel
     const hudPanel = this.add.graphics();
     hudPanel.fillStyle(0x090d16, 0.92);
     hudPanel.lineStyle(2, 0x00f0ff, 0.9);
@@ -219,10 +332,162 @@ export class GameScene extends Phaser.Scene {
       repeat: -1
     });
 
-    // ESC shortcut
+    // Keyboard ESC toggle pause shortcut
     if (this.input.keyboard) {
-      this.input.keyboard.on('keydown-ESC', () => this.scene.start('LevelSelectScene'));
+      this.input.keyboard.on('keydown-ESC', () => this.togglePause());
     }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // ⏸️ PAUSE, RESUME & NAVIGATION SYSTEM
+  // ═══════════════════════════════════════════════════════
+
+  private togglePause(): void {
+    if (this.isPaused) {
+      this.resumeGame();
+    } else {
+      this.pauseGame();
+    }
+  }
+
+  private pauseGame(): void {
+    if (this.isPaused) return;
+    this.isPaused = true;
+
+    // Freeze physics, animations, and scene timers
+    this.physics.pause();
+    this.tweens.pauseAll();
+    this.time.paused = true;
+    AudioManager.getInstance().pauseBGM();
+
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    this.pauseContainer = this.add.container(0, 0).setDepth(100);
+
+    // 1. Dark Semi-Transparent Backdrop
+    const backdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
+    this.pauseContainer.add(backdrop);
+
+    // 2. Glassmorphic Modal Card Body
+    const cw = 440;
+    const ch = 300;
+    const cx = width / 2;
+    const cy = height / 2;
+
+    const card = this.add.rectangle(cx, cy, cw, ch, 0x0f172a, 0.96)
+      .setStrokeStyle(2, 0x00f0ff, 0.9);
+    this.pauseContainer.add(card);
+
+    // Header Title
+    const title = this.add.text(cx, cy - 95, 'GAME PAUSED', {
+      fontFamily: 'Orbitron',
+      fontSize: '32px',
+      color: '#00f0ff',
+      stroke: '#05070e',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    this.pauseContainer.add(title);
+
+    const subtext = this.add.text(cx, cy - 50, `MISSION ${this.levelId} - ${this.envInfo.themeName}`, {
+      fontFamily: 'Inter',
+      fontSize: '14px',
+      color: '#94a3b8'
+    }).setOrigin(0.5);
+    this.pauseContainer.add(subtext);
+
+    // Modal Button Helper
+    const createModalButton = (by: number, text: string, colorHex: number, textHex: string, callback: () => void) => {
+      const bw = 260;
+      const bh = 52;
+
+      const btnRect = this.add.rectangle(cx, by, bw, bh, 0x1e293b, 0.95)
+        .setStrokeStyle(2, colorHex, 1)
+        .setInteractive({ useHandCursor: true });
+
+      const btnText = this.add.text(cx, by, text, {
+        fontFamily: 'Orbitron',
+        fontSize: '18px',
+        color: textHex
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      const trigger = () => {
+        callback();
+      };
+
+      btnRect.on('pointerover', () => {
+        btnRect.setFillStyle(colorHex, 0.95);
+        btnText.setColor('#ffffff');
+      });
+
+      btnText.on('pointerover', () => {
+        btnRect.setFillStyle(colorHex, 0.95);
+        btnText.setColor('#ffffff');
+      });
+
+      btnRect.on('pointerout', () => {
+        btnRect.setFillStyle(0x1e293b, 0.95);
+        btnText.setColor(textHex);
+      });
+
+      btnText.on('pointerout', () => {
+        btnRect.setFillStyle(0x1e293b, 0.95);
+        btnText.setColor(textHex);
+      });
+
+      btnRect.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+        if (event) event.stopPropagation();
+        trigger();
+      });
+
+      btnText.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+        if (event) event.stopPropagation();
+        trigger();
+      });
+
+      this.pauseContainer!.add(btnRect);
+      this.pauseContainer!.add(btnText);
+    };
+
+    // ▶ RESUME PLAY Button
+    createModalButton(cy + 10, '▶ RESUME PLAY', 0x00f0ff, '#00f0ff', () => this.resumeGame());
+
+    // 🚪 EXIT TO MENU Button
+    createModalButton(cy + 75, '🚪 EXIT TO MENU', 0xff0077, '#ff0077', () => this.exitToMenu());
+  }
+
+  private resumeGame(): void {
+    if (!this.isPaused) return;
+
+    if (this.pauseContainer) {
+      this.pauseContainer.destroy();
+      this.pauseContainer = null;
+    }
+
+    this.physics.resume();
+    this.tweens.resumeAll();
+    this.time.paused = false;
+    AudioManager.getInstance().resumeBGM();
+
+    this.isPaused = false;
+  }
+
+  private exitToMenu(): void {
+    AudioManager.getInstance().stopBGM();
+
+    if (this.isPaused) {
+      this.physics.resume();
+      this.tweens.resumeAll();
+      this.time.paused = false;
+      this.isPaused = false;
+    }
+
+    if (this.pauseContainer) {
+      this.pauseContainer.destroy();
+      this.pauseContainer = null;
+    }
+
+    this.scene.start('MainMenuScene');
   }
 
   private updateLivesDisplay(): void {
@@ -246,12 +511,10 @@ export class GameScene extends Phaser.Scene {
     const barH = 14;
 
     this.distanceProgressBar.clear();
-    // Track Bar Background
     this.distanceProgressBar.fillStyle(0x0f172a, 1);
     this.distanceProgressBar.fillRoundedRect(barX, barY, barW, barH, 5);
 
     const ratio = Phaser.Math.Clamp(this.runDistance / this.targetDistance, 0, 1);
-    // Glowing Cyan Progress Fill
     this.distanceProgressBar.fillStyle(0x00f0ff, 1);
     this.distanceProgressBar.fillRoundedRect(barX, barY, barW * ratio, barH, 5);
     this.distanceProgressBar.lineStyle(1.5, 0x00f0ff, 0.9);
@@ -261,7 +524,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updatePowerBar(): void {
-    const width = this.cameras.main.width;
     const barX = 145;
     const barY = 38;
     const barW = 90;
@@ -296,7 +558,7 @@ export class GameScene extends Phaser.Scene {
         coin.body.setCircle(14);
       }
     } else if (rand < 0.70) {
-      // Obstacle (Subway Train, Car, Crate, Barrier)
+      // Obstacle
       const obsKeys = ['obs_train', 'obs_car', 'obs_crate', 'obs_barrier'];
       const chosenKey = obsKeys[Math.floor(Math.random() * obsKeys.length)];
       const obs = this.objectsGroup.create(spawnX, spawnY, chosenKey) as MovingObject;
@@ -329,6 +591,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   public update(time: number, delta: number): void {
+    if (this.isPaused) return;
+
     // 1. Scroll Track & Hero Update
     const effectiveSpeed = this.runSpeed * this.speedScale;
     this.trackManager.update(delta, effectiveSpeed);
@@ -357,25 +621,27 @@ export class GameScene extends Phaser.Scene {
       // 3D Perspective Scaling & Converging Lane Position
       const targetScale = TrackEnvironmentManager.getScaleAtY(obj.y);
 
-      // ALIVE OBJECT ANIMATIONS: Floating Levitation, Bobbing & Spinning
-      const levitationBob = Math.sin(time * 0.006 + obj.x * 0.1) * 7;
-
       if (obj.objectCategory === 'coin') {
-        obj.rotation += 0.03; // Metallic coin spin
+        obj.rotation += 0.03;
         obj.setScale(targetScale * (1 + Math.sin(time * 0.008 + obj.y) * 0.08));
       } else if (obj.objectCategory === 'powerup') {
-        obj.rotation += 0.015; // Glass powerup orb rotation
+        obj.rotation += 0.015;
         obj.setScale(targetScale * (1 + Math.sin(time * 0.01) * 0.12));
       } else if (obj.objectCategory === 'bomb') {
-        // Breathing bomb hazard pulse
         obj.setScale(targetScale * (1 + Math.sin(time * 0.012) * 0.15));
       } else {
         obj.setScale(targetScale);
       }
 
-      // MAGNETIC ATTRACTION CORE MECHANIC!
+      // ═══════════════════════════════════════════════════════
+      // 🧲 SAME-LANE MAGNETIC ATTRACTION CORE MECHANIC & BOMB FIX!
+      // ═══════════════════════════════════════════════════════
       let isPulled = false;
-      if (obj.objectCategory === 'coin' || obj.objectCategory === 'crystal' || (this.hero.isSuperMagnet && obj.objectCategory !== 'obstacle')) {
+      const isSameLane = obj.lane === this.hero.currentLane;
+      const isAttractableCategory = obj.objectCategory === 'coin' || obj.objectCategory === 'crystal' || (this.hero.isSuperMagnet && obj.objectCategory === 'powerup');
+      const isNotHazard = obj.objectCategory !== 'bomb' && obj.objectCategory !== 'obstacle';
+
+      if (isSameLane && isNotHazard && isAttractableCategory) {
         const dist = Phaser.Math.Distance.Between(this.hero.x, this.hero.y, obj.x, obj.y);
         const radius = this.hero.isSuperMagnet ? 600 : this.hero.attractionRadius;
 
@@ -398,7 +664,7 @@ export class GameScene extends Phaser.Scene {
       }
 
       if (!isPulled) {
-        // Track along 3D Perspective Lane Slope with Floating Levitation
+        // Track along 3D Perspective Lane Slope
         obj.x = TrackEnvironmentManager.getLaneXAtY(obj.lane, obj.y) + (obj.objectCategory !== 'obstacle' ? Math.cos(time * 0.004 + obj.y) * 4 : 0);
       }
 
@@ -410,17 +676,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleRepelPulse(px: number, py: number, radius: number): void {
+    AudioManager.getInstance().playRepelSFX();
     const objects = this.objectsGroup.getChildren() as MovingObject[];
     objects.forEach(obj => {
       if (!obj.active) return;
 
       const dist = Phaser.Math.Distance.Between(px, py, obj.x, obj.y);
       if (dist <= radius && (obj.objectCategory === 'bomb' || obj.objectCategory === 'obstacle')) {
-        // REPEL & DESTROY HAZARD IN PULSE WAVE!
         this.showFloatingText(obj.x, obj.y, 'REPELLED! 💥 +200', '#00f0ff');
         this.score += 200;
 
-        // Sparkle explosion
         const emitter = this.add.particles(obj.x, obj.y, 'spark_particle', {
           speed: { min: 80, max: 200 },
           scale: { start: 1.5, end: 0 },
@@ -440,12 +705,14 @@ export class GameScene extends Phaser.Scene {
     if (!obj.active) return;
 
     if (obj.objectCategory === 'coin') {
+      AudioManager.getInstance().playCoinSFX();
       this.coinsCollected += 1;
       const pts = Math.floor(100 * this.combo);
       this.score += pts;
       this.combo = Math.min(5.0, this.combo + 0.15);
       this.showFloatingText(obj.x, obj.y, `+${pts}`, '#ffb700');
     } else if (obj.objectCategory === 'powerup') {
+      AudioManager.getInstance().playPowerupSFX();
       if (obj.powerType === 'shield') {
         hero.hasShield = true;
         this.showFloatingText(obj.x, obj.y, 'SHIELD ACTIVATED! 🛡️', '#38bdf8');
@@ -459,15 +726,18 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(4000, () => hero.isTurboBoost = false);
       }
     } else if (obj.objectCategory === 'obstacle' || obj.objectCategory === 'bomb') {
+      if (obj.objectCategory === 'bomb') {
+        AudioManager.getInstance().playBombSFX();
+      } else {
+        AudioManager.getInstance().playHitSFX();
+      }
       if (hero.hasShield) {
         hero.hasShield = false;
         this.showFloatingText(obj.x, obj.y, 'SHIELD ABSORBED HIT! 🛡️', '#38bdf8');
         this.cameras.main.shake(150, 0.01);
       } else if (hero.isTurboBoost) {
-        // Invincible during boost
         this.showFloatingText(obj.x, obj.y, 'BLASTED THROUGH! ⚡', '#4ade80');
       } else {
-        // DANGEROUS HIT TAKEN
         hero.lives -= 1;
         this.combo = 1;
         this.updateLivesDisplay();
@@ -484,6 +754,14 @@ export class GameScene extends Phaser.Scene {
 
     this.scoreText.setText(`⭐ SCORE: ${Math.floor(this.score)}`);
     this.coinsText.setText(`🪙 COINS: ${this.coinsCollected}`);
+
+    // Immediate cleanup from physics body, rendering canvas, and active array
+    if (obj.body) {
+      obj.body.enable = false;
+    }
+    obj.setActive(false);
+    obj.setVisible(false);
+    this.objectsGroup.remove(obj, true, true);
     obj.destroy();
   }
 
@@ -506,8 +784,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleLevelCompleted(): void {
+    AudioManager.getInstance().playWinSFX();
+    AudioManager.getInstance().stopBGM();
     const elapsedSeconds = Math.max(1, Math.floor((Date.now() - this.levelStartTime) / 1000));
-    // Stars = hearts remaining: 3 hearts → 3 stars, 2 hearts → 2 stars, 1 heart → 1 star
     const stars = Math.max(1, this.hero.lives);
 
     const currentProg = StorageManager.loadProgress();
@@ -571,26 +850,46 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleGameOver(): void {
+    // 1. Immediately halt BGM audio loop
+    AudioManager.getInstance().stopBGM();
+    AudioManager.getInstance().playHitSFX();
+
+    // 2. Pause scene physics and motion timers
+    this.isPaused = true;
+    this.physics.pause();
+    this.tweens.pauseAll();
+    this.time.paused = true;
+
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.85);
+    const overlay = this.add.graphics().setDepth(150);
+    overlay.fillStyle(0x000000, 0.88);
     overlay.fillRect(0, 0, width, height);
 
-    this.add.text(width / 2, height / 2 - 50, 'RUN CRASHED', {
+    this.add.text(width / 2, height / 2 - 60, 'RUN CRASHED', {
       fontFamily: 'Orbitron',
       fontSize: '48px',
       color: '#ef4444'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(151);
 
-    const retryBtn = this.add.text(width / 2, height / 2 + 30, 'RETRY RUN ↺', {
+    this.add.text(width / 2, height / 2 - 10, `FAILED AT LEVEL ${this.levelId} - ${this.envInfo.themeName}`, {
+      fontFamily: 'Orbitron',
+      fontSize: '15px',
+      color: '#94a3b8'
+    }).setOrigin(0.5).setDepth(151);
+
+    const retryBtn = this.add.text(width / 2, height / 2 + 45, 'RETRY RUN ↺', {
       fontFamily: 'Orbitron',
       fontSize: '22px',
       color: '#ffffff'
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(151);
 
     retryBtn.on('pointerdown', () => {
+      this.physics.resume();
+      this.tweens.resumeAll();
+      this.time.paused = false;
+      this.isPaused = false;
       this.scene.restart({ levelId: this.levelId });
     });
   }
