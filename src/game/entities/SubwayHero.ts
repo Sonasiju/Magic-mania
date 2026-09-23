@@ -54,7 +54,11 @@ export class SubwayHero extends Phaser.GameObjects.Container {
 
     // MAGNETIC REPEL PULSE (SPACEBAR / CLICK TAP)
     k.on('keydown-SPACE', () => this.triggerRepelPulse());
-    this.scene.input.on('pointerdown', () => this.triggerRepelPulse());
+    this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.y > 60 && !(this.scene as any).isPaused) {
+        this.triggerRepelPulse();
+      }
+    });
   }
 
   public moveLane(dir: -1 | 1): void {

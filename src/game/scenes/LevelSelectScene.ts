@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { StorageManager } from '../../storage/localStorage';
 import { EnvironmentManager } from '../systems/EnvironmentManager';
+import { AudioManager } from '../systems/AudioManager';
 
 export class LevelSelectScene extends Phaser.Scene {
   constructor() {
@@ -11,6 +12,9 @@ export class LevelSelectScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
     const progress = StorageManager.loadProgress();
+
+    // Ensure BGM is playing
+    AudioManager.getInstance().playBGM();
 
     // 1. Dark Futuristic Grid Background
     const bg = this.add.graphics();
@@ -32,6 +36,28 @@ export class LevelSelectScene extends Phaser.Scene {
       fontSize: '14px',
       color: '#94a3b8'
     }).setOrigin(0.5);
+
+    // Top-Right Sound Mute / Unmute Button
+    const audioMgr = AudioManager.getInstance();
+    const soundBtnBg = this.add.rectangle(width - 70, 40, 110, 36, 0x0f172a, 0.9)
+      .setStrokeStyle(2, 0x00f0ff, 0.8)
+      .setInteractive({ useHandCursor: true });
+    
+    const soundBtnText = this.add.text(width - 70, 40, audioMgr.isSoundMuted() ? '🔇 MUTED' : '🔊 SOUND', {
+      fontFamily: 'Orbitron',
+      fontSize: '13px',
+      color: audioMgr.isSoundMuted() ? '#ef4444' : '#00f0ff'
+    }).setOrigin(0.5);
+
+    soundBtnBg.on('pointerdown', () => {
+      const muted = audioMgr.toggleMute();
+      soundBtnText.setText(muted ? '🔇 MUTED' : '🔊 SOUND');
+      soundBtnText.setColor(muted ? '#ef4444' : '#00f0ff');
+      soundBtnBg.setStrokeStyle(2, muted ? 0xef4444 : 0x00f0ff, 0.8);
+      if (!muted) {
+        audioMgr.playCoinSFX();
+      }
+    });
 
     // 3. Render 20 Level Cards Grid (5 columns x 4 rows)
     const cols = 5;
@@ -107,7 +133,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
       // Interactive Click & 3D Hover elevation
       if (isUnlocked) {
-        const hitArea = this.add.zone(cx, cy, cardW, cardH).setInteractive({ useHandCursor: true });
+        const hitArea = this.add.rectangle(cx, cy, cardW, cardH, 0x000000, 0).setInteractive({ useHandCursor: true });
         
         hitArea.on('pointerover', () => {
           drawCardState(true);
@@ -135,3 +161,4 @@ export class LevelSelectScene extends Phaser.Scene {
     });
   }
 }
+
